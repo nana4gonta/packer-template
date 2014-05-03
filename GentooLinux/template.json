@@ -1,0 +1,87 @@
+{
+    "description": "Stage 3 Gentoo Installation And Vagrant Configuration",
+
+    "variables": {
+	"mirror": "http://ftp.jaist.ac.jp/pub/Linux/Gentoo",
+	"stage3":   "20140403",
+	"username": "root",
+	"password": "packer",
+	"dest_scripts": "/tmp"
+    },
+
+    "builders": [
+	{
+	    "vm_name":              "Gentoo",
+	    "type":                 "virtualbox-iso",
+	    "guest_os_type":        "Gentoo_64",
+	    "iso_url":              "{{user `mirror`}}/releases/amd64/autobuilds/{{user `stage3`}}/install-amd64-minimal-{{user `stage3`}}.iso",
+	    "iso_checksum":         "ddef2ef386ab6f9ddab9da8735d8671cfbe8c36a9ffce4b62ddde1f506b8672265c316f2e2cda21148f59133dc7fe4ce1ed3d840a6acd894910c5851f6eb01a1",
+	    "iso_checksum_type":    "sha512",
+	    "ssh_username":         "{{user `username`}}",
+	    "ssh_password":         "{{user `password`}}",
+	    "ssh_wait_timeout":     "10s",
+	    "shutdown_command":     "shutdown -hP now",
+	    "hard_drive_interface": "sata",
+	    "disk_size":            20000,
+	    "guest_additions_mode": "disable",
+	    "headless":             true,
+
+	    "vboxmanage": [
+		[
+		    "modifyvm",
+		    "{{.Name}}",
+		    "--memory",
+		    "512"
+		],
+		[
+		    "modifyvm",
+		    "{{.Name}}",
+		    "--cpus",
+		    "2"
+		]
+	    ],
+	    "boot_wait":            "5s",
+	    "boot_command": [
+		"gentoo-nofb",
+		"<enter>",
+		"<wait10>",
+		"<enter>",
+		"<wait10>",
+		"<wait10>",
+		"passwd {{user `username`}}",
+		"<enter>",
+		"{{user `password`}}",
+		"<enter>",
+		"{{user `password`}}",
+		"<enter>",
+		"/etc/init.d/sshd start",
+		"<enter>",
+		"<wait>"
+	    ]
+	}
+    ],
+    "provisioners": [
+	{
+	    "type":        "file",
+	    "source":      "scripts",
+	    "destination": "{{user `dest_scripts`}}"
+	},
+	{
+	    "type":             "shell",
+	    "environment_vars": [
+		"STAGE3={{user `stage3`}}",
+		"MIRROR={{user `mirror`}}",
+		"DEST_SCRIPTS={{user `dest_scripts`}}"
+	    ],
+	    "scripts":          ["provision.sh"]
+	}
+    ],
+
+    "post-processors": [
+	{
+	    "type":              "vagrant",
+	    "compression_level": 9,
+	    "output":            "packer_gentoo_{{.Provider}}.box"
+	}
+    ]
+}
